@@ -957,6 +957,8 @@ private:
 
         const Div *div_a = a.as<Div>();
         const Div *div_b = b.as<Div>();
+        const Mod *mod_a = a.as<Mod>();
+        const Mod *mod_b = b.as<Mod>();
 
         const Min *min_b = b.as<Min>();
         const Add *add_b_a = min_b ? min_b->a.as<Add>() : nullptr;
@@ -1411,6 +1413,12 @@ private:
             // (x + a)/c - (x - b)/c -> (b - (x + a)%c + (a + c - 1))/c
             Expr x = add_a_a->a, a = add_a_a->b, b = sub_b_a->b, c = div_a->b;
             expr = mutate((b - (x + (a % c))%c + (a + c - 1))/c);
+        } else if (mod_a &&
+                   mod_b &&
+                   equal(mod_a->b, mod_b->b)) {
+            // a % c - b % c -> (a - b)%c
+            Expr x = mod_a->a - mod_b->a;
+            expr = mutate(x) % mod_a->b;
         } else if (a.same_as(op->a) && b.same_as(op->b)) {
             expr = self;
         } else {
@@ -5118,6 +5126,7 @@ void check_algebra() {
     check(x*y - z*x, x*(y-z));
     check(y*x - x*z, x*(y-z));
     check(y*x - z*x, x*(y-z));
+    check(x%z - y%z, (x-y)%z);
     check(x - y*-2, x + y*2);
     check(x + y*-2, x - y*2);
     check(x*-2 + y, y - x*2);
